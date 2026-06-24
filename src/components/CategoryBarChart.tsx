@@ -14,7 +14,7 @@ export function CategoryBarChart({ data }: CategoryBarChartProps) {
 
     // Find a good categorical column (like Witel, Regional, Type, Category, Zone)
     let targetIndex = data.headers.findIndex(h => {
-      const lower = h.toLowerCase();
+      const lower = String(h).toLowerCase();
       return lower.includes('witel') || lower.includes('regional') || lower.includes('category') || 
              lower.includes('type') || lower.includes('zone') || lower.includes('sto');
     });

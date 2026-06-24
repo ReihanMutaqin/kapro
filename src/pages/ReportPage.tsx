@@ -12,7 +12,7 @@ interface ReportPageProps {
 export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
   const stats = useMemo(() => {
     const statusColIndex = data.headers.findIndex(
-      h => h.toLowerCase().includes('status') && !h.toLowerCase().includes('status_')
+      h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_')
     );
     let completed = 0, inProgress = 0, failed = 0, other = 0;
     if (statusColIndex >= 0) {
@@ -45,7 +45,7 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       const start = i * bucketSize;
       const end = Math.min(start + bucketSize, data.rows.length);
       const bucket = data.rows.slice(start, end);
-      const statusColIndex = data.headers.findIndex(h => h.toLowerCase().includes('status') && !h.toLowerCase().includes('status_'));
+      const statusColIndex = data.headers.findIndex(h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_'));
       let done = 0, fail = 0;
       if (statusColIndex >= 0) {
         bucket.forEach(row => {

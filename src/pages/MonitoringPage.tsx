@@ -25,7 +25,7 @@ export function MonitoringPage({ data }: MonitoringPageProps) {
 
   const analysis = useMemo(() => {
     const statusColIndex = data.headers.findIndex(
-      h => h.toLowerCase().includes('status') && !h.toLowerCase().includes('status_')
+      h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_')
     );
     const statusCounts: Record<string, number> = {};
     let completed = 0, failed = 0, inProgress = 0;

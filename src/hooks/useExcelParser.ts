@@ -71,8 +71,9 @@ export function useExcelParser() {
           return;
         }
 
-        const headers = jsonData[headerRowIndex].map((h, i) => {
-          if (h !== null && h !== '') return String(h).trim();
+        const headers = Array.from({ length: jsonData[headerRowIndex].length }, (_, i) => {
+          const h = jsonData[headerRowIndex][i];
+          if (h !== null && h !== undefined && h !== '') return String(h).trim();
           return `Column ${i + 1}`;
         });
 

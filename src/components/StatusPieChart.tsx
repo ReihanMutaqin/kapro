@@ -9,7 +9,7 @@ interface StatusPieChartProps {
 export function StatusPieChart({ data }: StatusPieChartProps) {
   const chartData = useMemo(() => {
     const statusColIndex = data.headers.findIndex(
-      h => h.toLowerCase().includes('status') && !h.toLowerCase().includes('status_')
+      h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_')
     );
 
     let completed = 0;

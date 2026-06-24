@@ -9,7 +9,7 @@ interface SummaryCardsProps {
 export function SummaryCards({ data }: SummaryCardsProps) {
   const stats = useMemo(() => {
     const statusColIndex = data.headers.findIndex(
-      h => h.toLowerCase().includes('status') && !h.toLowerCase().includes('status_')
+      h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_')
     );
 
     let completed = 0;

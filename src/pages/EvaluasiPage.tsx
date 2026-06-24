@@ -10,7 +10,7 @@ interface EvaluasiPageProps {
 export function EvaluasiPage({ data }: EvaluasiPageProps) {
   const eval_ = useMemo(() => {
     const statusColIndex = data.headers.findIndex(
-      h => h.toLowerCase().includes('status') && !h.toLowerCase().includes('status_')
+      h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_')
     );
     let completed = 0, failed = 0, inProgress = 0;
     if (statusColIndex >= 0) {
