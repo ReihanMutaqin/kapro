@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FileBarChart2, TrendingUp, TrendingDown, Minus, Download, Calendar, Filter } from 'lucide-react';
+import { FileBarChart2, TrendingUp, TrendingDown, Minus, Download, Calendar, Filter, Copy } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
 import type { ExcelData } from '@/types';
 import { useTableData } from '@/hooks/useTableData';
@@ -20,6 +20,7 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
   const [filterGroup, setFilterGroup] = useState<'STATUS' | 'KENDALA_PELANGGAN' | 'KENDALA_TEKNIK' | null>(null);
   const [filterValue, setFilterValue] = useState<string | null>(null);
   const [showFieldPanel, setShowFieldPanel] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const stats = useMemo(() => {
     const statusColIndex = data.headers.findIndex(
@@ -87,7 +88,7 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
     const subErrorIdx = data.headers.findIndex(h => String(h).toUpperCase().trim() === 'SUBERRORCODE');
     const errorIdx = data.headers.findIndex(h => String(h).toUpperCase().trim() === 'ERRORCODE');
 
-    const rows = data.rows.filter(row => {
+    const filteredRows = data.rows.filter(row => {
       if (filterGroup === 'STATUS') {
          if (statusIdx < 0) return false;
          return String(row[statusIdx]).toUpperCase().trim() === filterValue;
@@ -103,11 +104,19 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       return false;
     });
 
+    const selectedHeaderNames = ['STO', 'WONUM', 'STATUS', 'ERRORCODE_AKHIR', 'SUBERRORCODE_AKHIR', 'ENGINEERMEMO_AKHIR'];
+    const headerIndices = selectedHeaderNames.map(sh => 
+      data.headers.findIndex(h => String(h).toUpperCase().trim() === sh)
+    ).filter(idx => idx !== -1);
+
+    const newHeaders = headerIndices.map(idx => data.headers[idx]);
+    const newRows = filteredRows.map(row => headerIndices.map(idx => row[idx]));
+
     return {
-      headers: data.headers,
-      rows,
+      headers: newHeaders,
+      rows: newRows,
       fileName: `${data.fileName} - ${filterValue}`,
-      totalRows: rows.length
+      totalRows: newRows.length
     } as ExcelData;
   }, [data, filterGroup, filterValue]);
 
@@ -135,6 +144,20 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
     }
   };
 
+  const handleCopyFilteredData = () => {
+    if (!filteredData) return;
+    const headers = filteredData.headers.join('\t');
+    const rowsText = filteredData.rows.map(row => 
+      row.map(val => val !== null ? String(val).replace(/\t/g, ' ').replace(/\n/g, ' ') : '').join('\t')
+    ).join('\n');
+    
+    const tsvData = `${headers}\n${rowsText}`;
+    navigator.clipboard.writeText(tsvData).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Page Header */}
@@ -156,7 +179,7 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
             className="flex items-center gap-2 h-9 px-4 text-[13px] font-medium bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 shadow-md shadow-orange-200 transition-all duration-200"
           >
             <Download className="w-4 h-4" />
-            Export CSV
+            Export Full CSV
           </button>
         </div>
       </div>
@@ -279,12 +302,29 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">Menampilkan {filteredData.rows.length.toLocaleString()} baris data terkait filter {filterGroup.replace('_', ' ')}</p>
             </div>
-            <button
-              onClick={() => { setFilterGroup(null); setFilterValue(null); }}
-              className="text-xs font-medium px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-            >
-              Tutup Tabel
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleCopyFilteredData}
+                className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-colors border ${copySuccess ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+              >
+                <Copy className="w-3.5 h-3.5" />
+                {copySuccess ? 'Copied!' : 'Copy Data'}
+              </button>
+              <button
+                onClick={exportToCSV}
+                className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download CSV
+              </button>
+              <div className="w-px h-6 bg-slate-200 mx-1"></div>
+              <button
+                onClick={() => { setFilterGroup(null); setFilterValue(null); }}
+                className="text-xs font-medium px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Tutup Tabel
+              </button>
+            </div>
           </div>
           <div className="flex flex-1 min-h-0 relative">
             <DataTable
