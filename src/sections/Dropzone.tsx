@@ -41,17 +41,17 @@ export function Dropzone({ onFileSelect, isLoading, error }: DropzoneProps) {
   }, [onFileSelect]);
 
   return (
-    <div className="flex items-center justify-center flex-1 p-8">
+    <div className="flex items-center justify-center flex-1 p-8 bg-gradient-to-br from-orange-50 via-red-50 to-white">
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`
-          relative flex flex-col items-center justify-center w-full max-w-[480px] h-[280px]
-          border-2 border-dashed rounded-xl transition-all duration-200 cursor-pointer
+          relative flex flex-col items-center justify-center w-full max-w-[480px] h-[300px]
+          border-2 border-dashed rounded-2xl transition-all duration-200 cursor-pointer shadow-lg
           ${isDragOver
-            ? 'border-[#2A9D8F] bg-[#F0FDFA]'
-            : 'border-[#D1D5DB] bg-white hover:border-[#9CA3AF]'
+            ? 'border-orange-400 bg-orange-50 scale-[1.01]'
+            : 'border-orange-200 bg-white hover:border-orange-400 hover:shadow-orange-100'
           }
         `}
         onClick={() => !isLoading && document.getElementById('file-input')?.click()}
@@ -66,29 +66,26 @@ export function Dropzone({ onFileSelect, isLoading, error }: DropzoneProps) {
 
         {isLoading ? (
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="w-8 h-8 text-[#2A9D8F] animate-spin" />
-            <p className="text-sm font-medium text-[#374151]">Parsing data...</p>
+            <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
+            <p className="text-sm font-medium text-orange-700">Parsing data...</p>
           </div>
         ) : (
           <>
-            {isDragOver ? (
-              <FileSpreadsheet className="w-10 h-10 text-[#2A9D8F] mb-4" />
-            ) : (
-              <CloudUpload className="w-10 h-10 text-[#9CA3AF] mb-4" />
-            )}
-            <p className="text-sm font-medium text-[#374151] mb-1">
+            <div className="w-16 h-16 mb-4 flex items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-red-400 shadow-lg shadow-orange-200">
+              {isDragOver ? (
+                <FileSpreadsheet className="w-8 h-8 text-white" />
+              ) : (
+                <CloudUpload className="w-8 h-8 text-white" />
+              )}
+            </div>
+            <p className="text-base font-bold text-foreground mb-1">
               Drop your Excel or CSV file here
             </p>
-            <p className="text-xs text-[#9CA3AF] mb-5">
+            <p className="text-xs text-orange-400/80 mb-5">
               Supports .xlsx, .xls, .csv up to 10MB
             </p>
             <button
-              className="
-                px-4 py-1.5 text-xs font-medium rounded-md
-                border border-[#D1D5DB] bg-white text-[#374151]
-                hover:bg-[#F9FAFB] hover:border-[#9CA3AF]
-                transition-colors duration-150
-              "
+              className="px-5 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md shadow-orange-200 hover:from-orange-600 hover:to-red-600 transition-all duration-200"
               onClick={(e) => {
                 e.stopPropagation();
                 document.getElementById('file-input')?.click();

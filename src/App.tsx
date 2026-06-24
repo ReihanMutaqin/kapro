@@ -112,7 +112,7 @@ function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-[#F5F5F5] overflow-hidden">
+    <div className="flex flex-col h-screen w-screen bg-gradient-to-br from-orange-50 via-rose-50 to-white overflow-hidden">
       <Header
         onReset={handleReset}
         hasData={!!data}

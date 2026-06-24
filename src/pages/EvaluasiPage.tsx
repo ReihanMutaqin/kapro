@@ -65,11 +65,11 @@ export function EvaluasiPage({ data }: EvaluasiPageProps) {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
-            <ClipboardCheck className="w-6 h-6 text-amber-500" />
+          <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-500 bg-clip-text text-transparent">
+            <ClipboardCheck className="w-6 h-6 text-orange-500" />
             Evaluasi
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Penilaian performa dan analisis kualitas data</p>
+          <p className="text-sm text-orange-400/80 mt-1">Penilaian performa dan analisis kualitas data</p>
         </div>
         <div className={`flex items-center gap-3 px-5 py-3 ${eval_.gradeBg} rounded-2xl`}>
           <Star className={`w-5 h-5 ${eval_.gradeColor}`} />

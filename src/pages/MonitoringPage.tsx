@@ -81,11 +81,11 @@ export function MonitoringPage({ data }: MonitoringPageProps) {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
-            <Activity className="w-6 h-6 text-emerald-500" />
+          <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-500 bg-clip-text text-transparent">
+            <Activity className="w-6 h-6 text-orange-500" />
             Monitoring
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Pantau status dan progres data secara real-time</p>
+          <p className="text-sm text-orange-400/80 mt-1">Pantau status dan progres data secara real-time</p>
         </div>
         <div className={`flex items-center gap-2 px-4 py-2 ${analysis.healthBg} rounded-xl`}>
           <RefreshCw className={`w-4 h-4 ${analysis.healthColor}`} />

@@ -70,11 +70,11 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
-            <FileBarChart2 className="w-6 h-6 text-violet-500" />
+          <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2 bg-gradient-to-r from-orange-600 to-red-500 bg-clip-text text-transparent">
+            <FileBarChart2 className="w-6 h-6 text-orange-500" />
             Report
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Laporan ringkasan data fulfillment</p>
+          <p className="text-sm text-orange-400/80 mt-1">Laporan ringkasan data fulfillment</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg text-[12px] text-muted-foreground">
@@ -83,7 +83,7 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
           </div>
           <button
             onClick={onExport}
-            className="flex items-center gap-2 h-9 px-4 text-[13px] font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+            className="flex items-center gap-2 h-9 px-4 text-[13px] font-medium bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 shadow-md shadow-orange-200 transition-all duration-200"
           >
             <Download className="w-4 h-4" />
             Export CSV

@@ -8,7 +8,6 @@ interface SummaryCardsProps {
 
 export function SummaryCards({ data }: SummaryCardsProps) {
   const stats = useMemo(() => {
-    // Find status column
     const statusColIndex = data.headers.findIndex(
       h => h.toLowerCase().includes('status') && !h.toLowerCase().includes('status_')
     );
@@ -41,62 +40,70 @@ export function SummaryCards({ data }: SummaryCardsProps) {
       label: 'Total Rows',
       value: data.totalRows.toLocaleString(),
       icon: Rows3,
-      color: '#2A9D8F',
-      bgColor: '#F0FDFA',
+      gradient: 'from-orange-500 to-amber-400',
+      bgGlow: 'bg-orange-50',
+      border: 'border-orange-200',
+      glow: '#f97316',
     },
     {
       label: 'Columns',
       value: data.totalCols.toString(),
       icon: Columns3,
-      color: '#3B82F6',
-      bgColor: '#EFF6FF',
+      gradient: 'from-red-500 to-orange-400',
+      bgGlow: 'bg-red-50',
+      border: 'border-red-200',
+      glow: '#ef4444',
     },
     {
       label: 'Completed',
       value: stats.completed.toLocaleString(),
       icon: CheckCircle2,
-      color: '#10B981',
-      bgColor: '#ECFDF5',
+      gradient: 'from-emerald-500 to-teal-400',
+      bgGlow: 'bg-emerald-50',
+      border: 'border-emerald-200',
+      glow: '#10b981',
     },
     {
       label: 'In Progress',
       value: stats.inProgress.toLocaleString(),
       icon: Clock,
-      color: '#F59E0B',
-      bgColor: '#FFFBEB',
+      gradient: 'from-amber-500 to-yellow-400',
+      bgGlow: 'bg-amber-50',
+      border: 'border-amber-200',
+      glow: '#f59e0b',
     },
     {
       label: 'Failed/Cancelled',
       value: stats.failed.toLocaleString(),
       icon: XCircle,
-      color: '#EF4444',
-      bgColor: '#FEF2F2',
+      gradient: 'from-rose-500 to-red-400',
+      bgGlow: 'bg-rose-50',
+      border: 'border-rose-200',
+      glow: '#f43f5e',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 p-6 bg-transparent flex-shrink-0 relative z-10">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 px-6 py-4 bg-transparent flex-shrink-0">
       {cards.map((card) => (
         <div
           key={card.label}
-          className="flex flex-col gap-2 p-5 glass premium-shadow rounded-xl transition-all duration-300 hover:-translate-y-1 relative overflow-hidden group"
+          className={`flex flex-col gap-3 p-5 bg-white/80 backdrop-blur-sm rounded-2xl border ${card.border} shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] transition-all duration-300 hover:-translate-y-1 relative overflow-hidden group cursor-default`}
         >
-          {/* Subtle background glow effect */}
-          <div className="absolute -inset-1 opacity-0 group-hover:opacity-20 transition-opacity duration-500 blur-xl rounded-2xl" style={{ backgroundColor: card.color }}></div>
-          
+          {/* Subtle glow */}
+          <div
+            className="absolute -inset-1 opacity-0 group-hover:opacity-15 transition-opacity duration-500 blur-xl rounded-2xl"
+            style={{ backgroundColor: card.glow }}
+          />
+
           <div className="flex items-center gap-3 relative z-10">
-            <div
-              className="flex items-center justify-center w-10 h-10 rounded-xl flex-shrink-0 shadow-sm"
-              style={{ backgroundColor: card.bgColor }}
-            >
-              <card.icon className="w-5 h-5" style={{ color: card.color }} />
+            <div className={`flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br ${card.gradient} shadow-md flex-shrink-0`}>
+              <card.icon className="w-5 h-5 text-white" />
             </div>
-            <p className="text-[13px] text-muted-foreground font-medium truncate">{card.label}</p>
+            <p className="text-[12px] text-muted-foreground font-semibold truncate">{card.label}</p>
           </div>
-          
-          <div className="relative z-10 mt-1">
-            <p className="text-2xl font-bold text-foreground leading-tight tracking-tight">{card.value}</p>
-          </div>
+
+          <p className="text-2xl font-black text-foreground leading-tight tracking-tight relative z-10">{card.value}</p>
         </div>
       ))}
     </div>
