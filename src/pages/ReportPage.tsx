@@ -17,10 +17,16 @@ const KENDALA_PELANGGAN_OPTIONS = ['PENDING', 'RNA', 'BATAL', 'SALAH TAGGING', '
 const KENDALA_TEKNIK_OPTIONS = ['ODP JAUH', 'TIDAK ADA ODP', 'ODP FULL', 'KENDALA JALUR/RUTE TARIKAN', 'TIANG', 'KENDALA IKR/IKG', 'ODP LOSS', 'CROSS JALAN', 'ODP RETI'];
 
 export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
-  const [filterGroup, setFilterGroup] = useState<'STATUS' | 'KENDALA_PELANGGAN' | 'KENDALA_TEKNIK' | null>(null);
-  const [filterValue, setFilterValue] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    STATUS: '',
+    KENDALA_PELANGGAN: '',
+    KENDALA_TEKNIK: ''
+  });
   const [showFieldPanel, setShowFieldPanel] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  const hasActiveFilter = Boolean(filters.STATUS || filters.KENDALA_PELANGGAN || filters.KENDALA_TEKNIK);
+  const activeFilterNames = [filters.STATUS, filters.KENDALA_PELANGGAN, filters.KENDALA_TEKNIK].filter(Boolean).join(' + ');
 
   const stats = useMemo(() => {
     const statusColIndex = data.headers.findIndex(
@@ -82,26 +88,39 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
   ];
 
   const filteredData = useMemo(() => {
-    if (!filterGroup || !filterValue) return null;
+    if (!hasActiveFilter) return null;
 
     const statusIdx = data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'STATUS');
     const subErrorIdx = data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'SUBERRORCODEAKHIR');
     const errorIdx = data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'ERRORCODEAKHIR');
 
     const filteredRows = data.rows.filter(row => {
-      if (filterGroup === 'STATUS') {
-         if (statusIdx < 0) return false;
-         return String(row[statusIdx]).toUpperCase().trim() === filterValue;
+      let match = true;
+
+      if (filters.STATUS) {
+        if (statusIdx < 0) match = false;
+        else if (String(row[statusIdx]).toUpperCase().trim() !== filters.STATUS) match = false;
       }
-      if (filterGroup === 'KENDALA_PELANGGAN' || filterGroup === 'KENDALA_TEKNIK') {
-         if (subErrorIdx < 0 || errorIdx < 0) return false;
-         const errCode = String(row[errorIdx]).toUpperCase().trim();
-         const subErr = String(row[subErrorIdx]).toUpperCase().trim();
-         
-         const targetErrCode = filterGroup === 'KENDALA_PELANGGAN' ? 'KENDALA PELANGGAN' : 'KENDALA TEKNIK';
-         return errCode === targetErrCode && subErr === filterValue;
+
+      if (filters.KENDALA_PELANGGAN) {
+        if (subErrorIdx < 0 || errorIdx < 0) match = false;
+        else {
+          const errCode = String(row[errorIdx]).toUpperCase().trim();
+          const subErr = String(row[subErrorIdx]).toUpperCase().trim();
+          if (errCode !== 'KENDALA PELANGGAN' || subErr !== filters.KENDALA_PELANGGAN) match = false;
+        }
       }
-      return false;
+
+      if (filters.KENDALA_TEKNIK) {
+        if (subErrorIdx < 0 || errorIdx < 0) match = false;
+        else {
+          const errCode = String(row[errorIdx]).toUpperCase().trim();
+          const subErr = String(row[subErrorIdx]).toUpperCase().trim();
+          if (errCode !== 'KENDALA TEKNIK' || subErr !== filters.KENDALA_TEKNIK) match = false;
+        }
+      }
+
+      return match;
     });
 
     const headerIndices = [
@@ -122,10 +141,10 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
     return {
       headers: newHeaders,
       rows: newRows,
-      fileName: `${data.fileName} - ${filterValue}`,
+      fileName: `${data.fileName} - ${activeFilterNames}`,
       totalRows: newRows.length
     } as ExcelData;
-  }, [data, filterGroup, filterValue]);
+  }, [data, hasActiveFilter, filters, activeFilterNames]);
 
   const {
     searchQuery,
@@ -141,16 +160,6 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
     exportToCSV,
   } = useTableData(filteredData);
 
-  const handleSelectFilter = (group: 'STATUS' | 'KENDALA_PELANGGAN' | 'KENDALA_TEKNIK', val: string) => {
-    if (val === '') {
-      setFilterGroup(null);
-      setFilterValue(null);
-    } else {
-      setFilterGroup(group);
-      setFilterValue(val.toUpperCase());
-    }
-  };
-
   const handleCopyFilteredData = () => {
     if (!filteredData) return;
     const headers = filteredData.headers.join('\t');
@@ -163,6 +172,10 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     });
+  };
+
+  const clearAllFilters = () => {
+    setFilters({ STATUS: '', KENDALA_PELANGGAN: '', KENDALA_TEKNIK: '' });
   };
 
   return (
@@ -199,35 +212,35 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
         </div>
         
         <select 
-          className={`text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${filterGroup === 'STATUS' ? 'bg-orange-50 border-orange-200 text-orange-700 font-medium' : 'bg-slate-50 border-slate-200'}`}
-          value={filterGroup === 'STATUS' ? filterValue || '' : ''}
-          onChange={(e) => handleSelectFilter('STATUS', e.target.value)}
+          className={`text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${filters.STATUS ? 'bg-orange-50 border-orange-200 text-orange-700 font-medium' : 'bg-slate-50 border-slate-200'}`}
+          value={filters.STATUS}
+          onChange={(e) => setFilters(prev => ({ ...prev, STATUS: e.target.value }))}
         >
           <option value="">-- Status --</option>
           {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
 
         <select 
-          className={`text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${filterGroup === 'KENDALA_PELANGGAN' ? 'bg-orange-50 border-orange-200 text-orange-700 font-medium' : 'bg-slate-50 border-slate-200'}`}
-          value={filterGroup === 'KENDALA_PELANGGAN' ? filterValue || '' : ''}
-          onChange={(e) => handleSelectFilter('KENDALA_PELANGGAN', e.target.value)}
+          className={`text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${filters.KENDALA_PELANGGAN ? 'bg-orange-50 border-orange-200 text-orange-700 font-medium' : 'bg-slate-50 border-slate-200'}`}
+          value={filters.KENDALA_PELANGGAN}
+          onChange={(e) => setFilters(prev => ({ ...prev, KENDALA_PELANGGAN: e.target.value }))}
         >
           <option value="">-- Kendala Pelanggan --</option>
           {KENDALA_PELANGGAN_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
 
         <select 
-          className={`text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${filterGroup === 'KENDALA_TEKNIK' ? 'bg-orange-50 border-orange-200 text-orange-700 font-medium' : 'bg-slate-50 border-slate-200'}`}
-          value={filterGroup === 'KENDALA_TEKNIK' ? filterValue || '' : ''}
-          onChange={(e) => handleSelectFilter('KENDALA_TEKNIK', e.target.value)}
+          className={`text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${filters.KENDALA_TEKNIK ? 'bg-orange-50 border-orange-200 text-orange-700 font-medium' : 'bg-slate-50 border-slate-200'}`}
+          value={filters.KENDALA_TEKNIK}
+          onChange={(e) => setFilters(prev => ({ ...prev, KENDALA_TEKNIK: e.target.value }))}
         >
           <option value="">-- Kendala Teknik --</option>
           {KENDALA_TEKNIK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
         </select>
 
-        {filterGroup && (
+        {hasActiveFilter && (
           <button 
-            onClick={() => { setFilterGroup(null); setFilterValue(null); }}
+            onClick={clearAllFilters}
             className="text-xs text-slate-500 hover:text-red-500 hover:bg-red-50 px-2 py-1.5 rounded-md transition-colors ml-auto"
           >
             Clear Filters
@@ -268,14 +281,14 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
                 dataKey="value" 
                 name="Jumlah" 
                 radius={[4, 4, 0, 0]}
-                onClick={(data) => handleSelectFilter('STATUS', filterValue === data.name ? '' : data.name)}
+                onClick={(data) => setFilters(prev => ({ ...prev, STATUS: prev.STATUS === data.name ? '' : data.name }))}
               >
                 {statusBarData.map((entry, idx) => (
                   <Cell 
                     key={idx} 
                     fill={entry.fill} 
                     className="cursor-pointer transition-all duration-300 hover:brightness-110" 
-                    opacity={filterGroup === 'STATUS' && filterValue !== entry.name ? 0.3 : 1}
+                    opacity={filters.STATUS && filters.STATUS !== entry.name ? 0.3 : 1}
                   />
                 ))}
               </Bar>
@@ -300,14 +313,14 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       </div>
 
       {/* Drill-down Table */}
-      {filterGroup && filterValue && filteredData && (
+      {hasActiveFilter && filteredData && (
         <div className="flex flex-col h-[500px] glass premium-shadow rounded-2xl overflow-hidden mt-2 animate-in slide-in-from-top-4 duration-300">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-white/50">
             <div>
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                Detail Data: {filterValue}
+                Detail Data: {activeFilterNames}
               </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Menampilkan {filteredData.rows.length.toLocaleString()} baris data terkait filter {filterGroup.replace('_', ' ')}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Menampilkan {filteredData.rows.length.toLocaleString()} baris data dari kombinasi filter tersebut.</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -326,7 +339,7 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
               </button>
               <div className="w-px h-6 bg-slate-200 mx-1"></div>
               <button
-                onClick={() => { setFilterGroup(null); setFilterValue(null); }}
+                onClick={clearAllFilters}
                 className="text-xs font-medium px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
               >
                 Tutup Tabel
