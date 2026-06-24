@@ -84,9 +84,9 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
   const filteredData = useMemo(() => {
     if (!filterGroup || !filterValue) return null;
 
-    const statusIdx = data.headers.findIndex(h => String(h).toUpperCase().trim() === 'STATUS');
-    const subErrorIdx = data.headers.findIndex(h => String(h).toUpperCase().trim() === 'SUBERRORCODE');
-    const errorIdx = data.headers.findIndex(h => String(h).toUpperCase().trim() === 'ERRORCODE');
+    const statusIdx = data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'STATUS');
+    const subErrorIdx = data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'SUBERRORCODEAKHIR');
+    const errorIdx = data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'ERRORCODEAKHIR');
 
     const filteredRows = data.rows.filter(row => {
       if (filterGroup === 'STATUS') {
