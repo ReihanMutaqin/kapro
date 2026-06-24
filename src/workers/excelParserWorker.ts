@@ -12,27 +12,25 @@ self.onmessage = async (e: MessageEvent) => {
     let firstSheetName = 'Sheet1';
 
     try {
-      // Try parsing normally as Excel
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
+      // Fast bypass for HTML disguised as XLS
+      const headerBytes = new Uint8Array(arrayBuffer.slice(0, 1024));
+      let headerStr = '';
+      for (let i = 0; i < headerBytes.length; i++) {
+        headerStr += String.fromCharCode(headerBytes[i]);
+      }
+      
+      const isHtml = headerStr.toLowerCase().includes('<html') || 
+                     headerStr.toLowerCase().includes('<table') || 
+                     headerStr.toLowerCase().includes('<style');
 
-      postMessage({ type: 'progress', message: 'Mengekstrak baris data...' });
-      jsonData = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1,
-        defval: null,
-        raw: false,
-      });
-    } catch (err: any) {
-      const errMsg = err?.message || String(err);
-      if (errMsg.includes('Invalid HTML')) {
-        postMessage({ type: 'progress', message: 'Membaca file HTML berukuran besar (format lama)...' });
+      if (isHtml) {
+        postMessage({ type: 'progress', message: 'Membaca file HTML berukuran sangat besar (format lama)...' });
         
-        // Convert ArrayBuffer to string manually (faster for utf-8)
+        // Convert ArrayBuffer to string manually
         const decoder = new TextDecoder('utf-8');
         const text = decoder.decode(arrayBuffer);
         
-        postMessage({ type: 'progress', message: 'Mengekstrak baris data HTML...' });
+        postMessage({ type: 'progress', message: 'Mengekstrak baris data HTML secara cepat...' });
         const rowsText = text.split(/<tr[^>]*>/i);
         
         for (let i = 1; i < rowsText.length; i++) {
@@ -51,8 +49,20 @@ self.onmessage = async (e: MessageEvent) => {
           }
         }
       } else {
-        throw err;
+        // Try parsing normally as Excel
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+
+        postMessage({ type: 'progress', message: 'Mengekstrak baris data Excel...' });
+        jsonData = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,
+          defval: null,
+          raw: false,
+        });
       }
+    } catch (err: any) {
+      throw err;
     }
 
     postMessage({ type: 'progress', message: `Mengekstrak ${jsonData.length} baris data...` });
