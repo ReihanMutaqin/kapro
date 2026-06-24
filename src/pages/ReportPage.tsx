@@ -1,7 +1,10 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { FileBarChart2, TrendingUp, TrendingDown, Minus, Download, Calendar } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
 import type { ExcelData } from '@/types';
+import { useTableData } from '@/hooks/useTableData';
+import { DataTable } from '@/sections/DataTable';
+import { FieldPanel } from '@/sections/FieldPanel';
 
 interface ReportPageProps {
   data: ExcelData;
@@ -10,6 +13,9 @@ interface ReportPageProps {
 }
 
 export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showFieldPanel, setShowFieldPanel] = useState(false);
+
   const stats = useMemo(() => {
     const statusColIndex = data.headers.findIndex(
       h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_')
@@ -65,6 +71,44 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
     { label: 'Pending', value: stats.inProgress.toLocaleString(), icon: Minus, color: 'from-amber-400 to-orange-500', trend: null },
   ];
 
+  const filteredData = useMemo(() => {
+    if (!selectedCategory) return null;
+    const statusColIndex = data.headers.findIndex(
+      h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_')
+    );
+    if (statusColIndex < 0) return null;
+
+    const rows = data.rows.filter(row => {
+      const val = String(row[statusColIndex] || '').toLowerCase().trim();
+      let cat = 'Other';
+      if (val === 'compwork' || val === 'complete' || val === 'done' || val === 'finished') cat = 'Completed';
+      else if (val === 'canclwork' || val === 'cancel' || val === 'failed' || val === 'workfail') cat = 'Failed';
+      else if (val === 'booked' || val === 'pending' || val === 'in_progress' || val === '') cat = 'In Progress';
+      return cat === selectedCategory;
+    });
+
+    return {
+      headers: data.headers,
+      rows,
+      fileName: `${data.fileName} - ${selectedCategory}`,
+      totalRows: rows.length
+    } as ExcelData;
+  }, [data, selectedCategory]);
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    sortConfig,
+    toggleSort,
+    expandedRow,
+    expandRow,
+    columnConfigs,
+    visibleColumns,
+    processedRows,
+    toggleColumnVisibility,
+    exportToCSV,
+  } = useTableData(filteredData);
+
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Page Header */}
@@ -113,16 +157,26 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass premium-shadow rounded-2xl p-5">
           <h2 className="text-base font-bold text-foreground mb-1">Distribusi Status</h2>
-          <p className="text-xs text-muted-foreground mb-4">Jumlah data per status</p>
+          <p className="text-xs text-muted-foreground mb-4">Klik pada batang diagram untuk melihat data spesifik</p>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={statusBarData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }} />
-              <Bar dataKey="value" name="Jumlah" radius={[6, 6, 0, 0]}>
+              <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }} />
+              <Bar 
+                dataKey="value" 
+                name="Jumlah" 
+                radius={[6, 6, 0, 0]}
+                onClick={(data) => setSelectedCategory(prev => prev === data.name ? null : data.name)}
+              >
                 {statusBarData.map((entry, idx) => (
-                  <rect key={idx} fill={entry.fill} />
+                  <Cell 
+                    key={idx} 
+                    fill={entry.fill} 
+                    className="cursor-pointer transition-all duration-300 hover:brightness-110" 
+                    opacity={selectedCategory && selectedCategory !== entry.name ? 0.3 : 1}
+                  />
                 ))}
               </Bar>
             </BarChart>
@@ -144,6 +198,54 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Drill-down Table */}
+      {selectedCategory && filteredData && (
+        <div className="flex flex-col h-[500px] glass premium-shadow rounded-2xl overflow-hidden mt-2 animate-in slide-in-from-top-4 duration-300">
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-white/50">
+            <div>
+              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: statusBarData.find(d => d.name === selectedCategory)?.fill }}></span>
+                Detail Data: {selectedCategory}
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Menampilkan {filteredData.rows.length.toLocaleString()} baris data terkait</p>
+            </div>
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="text-xs font-medium px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+            >
+              Tutup Tabel
+            </button>
+          </div>
+          <div className="flex flex-1 min-h-0 relative">
+            <DataTable
+              data={filteredData}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              sortConfig={sortConfig}
+              onSort={toggleSort}
+              expandedRow={expandedRow}
+              onExpandRow={expandRow}
+              visibleColumns={visibleColumns}
+              processedRows={processedRows}
+              onTogglePanel={() => setShowFieldPanel(prev => !prev)}
+              onExport={exportToCSV}
+              fileName={filteredData.fileName}
+            />
+            {showFieldPanel && (
+              <div className="w-[280px] flex-shrink-0 h-full border-l border-border bg-white absolute right-0 top-0 bottom-0 shadow-xl z-20">
+                <FieldPanel
+                  columns={columnConfigs}
+                  onToggleColumn={toggleColumnVisibility}
+                  onClose={() => setShowFieldPanel(false)}
+                  hiddenCount={columnConfigs.filter(c => !c.visible).length}
+                  totalCount={columnConfigs.length}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
