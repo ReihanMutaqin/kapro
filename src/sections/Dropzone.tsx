@@ -1,4 +1,4 @@
-import { useCallback, useState, type DragEvent, type ChangeEvent } from 'react';
+import { useCallback, useState, useEffect, type DragEvent, type ChangeEvent } from 'react';
 import { CloudUpload, FileSpreadsheet, AlertCircle, Loader2 } from 'lucide-react';
 
 interface DropzoneProps {
@@ -10,6 +10,20 @@ interface DropzoneProps {
 
 export function Dropzone({ onFileSelect, isLoading, statusText, error }: DropzoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    let interval: number;
+    if (isLoading) {
+      setElapsed(0);
+      interval = window.setInterval(() => {
+        setElapsed(prev => prev + 1);
+      }, 1000);
+    } else {
+      setElapsed(0);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -68,7 +82,10 @@ export function Dropzone({ onFileSelect, isLoading, statusText, error }: Dropzon
         {isLoading ? (
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-            <p className="text-sm font-medium text-orange-700">{statusText || 'Parsing data...'}</p>
+            <p className="text-sm font-medium text-orange-700">
+              {statusText || 'Parsing data...'}
+              {isLoading && elapsed > 0 && <span className="ml-1 opacity-70">({elapsed}s)</span>}
+            </p>
           </div>
         ) : (
           <>
