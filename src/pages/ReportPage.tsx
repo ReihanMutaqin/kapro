@@ -105,11 +105,11 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
     });
 
     const headerIndices = [
-      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'STO'),
-      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'WONUM'),
-      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'STATUS'),
-      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'ERRORCODE_AKHIR'),
-      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'SUBERRORCODE_AKHIR'),
+      data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'STO'),
+      data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'WONUM'),
+      data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'STATUS'),
+      data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'ERRORCODEAKHIR'),
+      data.headers.findIndex(h => String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '') === 'SUBERRORCODEAKHIR'),
       data.headers.findIndex(h => {
         const cleanH = String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '');
         return cleanH === 'ENGINEERMEMOAKHIR' || cleanH === 'ENGINEERINGMEMOAKHIR' || cleanH === 'ENGINERINGMEMOAKHIR';
