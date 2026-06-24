@@ -104,10 +104,17 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       return false;
     });
 
-    const selectedHeaderNames = ['STO', 'WONUM', 'STATUS', 'ERRORCODE_AKHIR', 'SUBERRORCODE_AKHIR', 'ENGINEERMEMO_AKHIR'];
-    const headerIndices = selectedHeaderNames.map(sh => 
-      data.headers.findIndex(h => String(h).toUpperCase().trim() === sh)
-    ).filter(idx => idx !== -1);
+    const headerIndices = [
+      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'STO'),
+      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'WONUM'),
+      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'STATUS'),
+      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'ERRORCODE_AKHIR'),
+      data.headers.findIndex(h => String(h).toUpperCase().trim() === 'SUBERRORCODE_AKHIR'),
+      data.headers.findIndex(h => {
+        const cleanH = String(h).toUpperCase().replace(/_/g, '').replace(/\s/g, '');
+        return cleanH === 'ENGINEERMEMOAKHIR' || cleanH === 'ENGINEERINGMEMOAKHIR' || cleanH === 'ENGINERINGMEMOAKHIR';
+      })
+    ].filter(idx => idx !== -1);
 
     const newHeaders = headerIndices.map(idx => data.headers[idx]);
     const newRows = filteredRows.map(row => headerIndices.map(idx => row[idx]));
