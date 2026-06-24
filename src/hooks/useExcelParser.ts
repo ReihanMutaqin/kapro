@@ -40,7 +40,7 @@ export function useExcelParser() {
     }
 
     // Create a new Web Worker
-    const worker = new Worker(new URL('../workers/excelWorker.ts', import.meta.url), { type: 'module' });
+    const worker = new Worker(new URL('../workers/excelParserWorker.ts', import.meta.url), { type: 'module' });
     workerRef.current = worker;
 
     worker.onmessage = (e) => {
