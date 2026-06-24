@@ -135,6 +135,24 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
         </div>
       </div>
 
+      {/* Filter Chips */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <span className="text-[13px] font-semibold text-slate-500 mr-1">Filter Status:</span>
+        {['Semua', 'Completed', 'In Progress', 'Failed', 'Other'].map(status => (
+          <button
+            key={status}
+            onClick={() => setSelectedCategory(status === 'Semua' ? null : status)}
+            className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all ${
+              (status === 'Semua' && !selectedCategory) || status === selectedCategory
+                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md border-transparent'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+            }`}
+          >
+            {status}
+          </button>
+        ))}
+      </div>
+
       {/* Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map(m => {
