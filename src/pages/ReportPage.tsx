@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FileBarChart2, TrendingUp, TrendingDown, Minus, Download, Calendar } from 'lucide-react';
+import { FileBarChart2, TrendingUp, TrendingDown, Minus, Download, Calendar, Filter } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Cell } from 'recharts';
 import type { ExcelData } from '@/types';
 import { useTableData } from '@/hooks/useTableData';
@@ -12,36 +12,45 @@ interface ReportPageProps {
   fileName: string;
 }
 
+const STATUS_OPTIONS = ['STARTWORK', 'INSTCOMP', 'CONTWORK', 'WORKFAIL', 'CANCLWORK', 'ACTCOMP', 'VALSTART', 'VALCOMP', 'COMPWORK', 'DEINSTCOMP', 'WAPPR', 'PENDWORK'];
+const KENDALA_PELANGGAN_OPTIONS = ['PENDING', 'RNA', 'BATAL', 'SALAH TAGGING', 'KENDALA IZIN', 'GANTI PAKET', 'DOUBLE INPUT', 'INDIKASI CABUT PASANG', 'ALAMAT TIDAK DITEMUKAN', 'PELANGGAN MASIH RAGU', 'RUMAH KOSONG', 'KENDALA DEPOSIT', 'KENDALA MATERIAL/NTE', 'FALLOUT PELANGGAN - SALAH HOMEPASS', 'KENDALA PERANGKAT', 'FALLOUT PELANGGAN - ODP SALAH RELASI HOMEPASS'];
+const KENDALA_TEKNIK_OPTIONS = ['ODP JAUH', 'TIDAK ADA ODP', 'ODP FULL', 'KENDALA JALUR/RUTE TARIKAN', 'TIANG', 'KENDALA IKR/IKG', 'ODP LOSS', 'CROSS JALAN', 'ODP RETI'];
+
 export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [filterGroup, setFilterGroup] = useState<'STATUS' | 'KENDALA_PELANGGAN' | 'KENDALA_TEKNIK' | null>(null);
+  const [filterValue, setFilterValue] = useState<string | null>(null);
   const [showFieldPanel, setShowFieldPanel] = useState(false);
 
   const stats = useMemo(() => {
     const statusColIndex = data.headers.findIndex(
-      h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_')
+      h => String(h).toUpperCase().trim() === 'STATUS'
     );
-    let completed = 0, inProgress = 0, failed = 0, other = 0;
+    
+    const counts: Record<string, number> = {};
+    let completed = 0, failed = 0, inProgress = 0;
+
     if (statusColIndex >= 0) {
       data.rows.forEach(row => {
-        const val = String(row[statusColIndex] || '').toLowerCase().trim();
-        if (val === 'compwork' || val === 'complete' || val === 'done' || val === 'finished') completed++;
-        else if (val === 'canclwork' || val === 'cancel' || val === 'failed' || val === 'workfail') failed++;
-        else if (val === 'booked' || val === 'pending' || val === 'in_progress' || val === '') inProgress++;
-        else other++;
+        const val = String(row[statusColIndex] || '').toUpperCase().trim();
+        if (val) {
+          counts[val] = (counts[val] || 0) + 1;
+          if (['COMPWORK', 'ACTCOMP', 'VALCOMP', 'DEINSTCOMP'].includes(val)) completed++;
+          else if (['WORKFAIL', 'CANCLWORK'].includes(val)) failed++;
+          else inProgress++;
+        }
       });
     }
+
     const total = data.totalRows;
     const completionRate = total > 0 ? ((completed / total) * 100).toFixed(1) : '0';
     const failRate = total > 0 ? ((failed / total) * 100).toFixed(1) : '0';
-    return { completed, inProgress, failed, other, total, completionRate, failRate };
+    
+    return { counts, completed, failed, inProgress, total, completionRate, failRate };
   }, [data]);
 
-  const statusBarData = [
-    { name: 'Completed', value: stats.completed, fill: '#10B981' },
-    { name: 'In Progress', value: stats.inProgress, fill: '#F59E0B' },
-    { name: 'Failed', value: stats.failed, fill: '#EF4444' },
-    { name: 'Other', value: stats.other, fill: '#8B5CF6' },
-  ].filter(d => d.value > 0);
+  const statusBarData = Object.entries(stats.counts)
+    .map(([name, value]) => ({ name, value, fill: '#f97316' }))
+    .sort((a, b) => b.value - a.value);
 
   // Simulate daily trend from data (group by index buckets)
   const trendData = useMemo(() => {
@@ -51,13 +60,13 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       const start = i * bucketSize;
       const end = Math.min(start + bucketSize, data.rows.length);
       const bucket = data.rows.slice(start, end);
-      const statusColIndex = data.headers.findIndex(h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_'));
+      const statusColIndex = data.headers.findIndex(h => String(h).toUpperCase().trim() === 'STATUS');
       let done = 0, fail = 0;
       if (statusColIndex >= 0) {
         bucket.forEach(row => {
-          const val = String(row[statusColIndex] || '').toLowerCase().trim();
-          if (val === 'compwork' || val === 'complete' || val === 'done') done++;
-          else if (val === 'canclwork' || val === 'cancel' || val === 'failed') fail++;
+          const val = String(row[statusColIndex] || '').toUpperCase().trim();
+          if (['COMPWORK', 'ACTCOMP', 'VALCOMP', 'DEINSTCOMP'].includes(val)) done++;
+          else if (['WORKFAIL', 'CANCLWORK'].includes(val)) fail++;
         });
       }
       return { label: `Batch ${i + 1}`, Completed: done, Failed: fail };
@@ -72,28 +81,35 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
   ];
 
   const filteredData = useMemo(() => {
-    if (!selectedCategory) return null;
-    const statusColIndex = data.headers.findIndex(
-      h => String(h).toLowerCase().includes('status') && !String(h).toLowerCase().includes('status_')
-    );
-    if (statusColIndex < 0) return null;
+    if (!filterGroup || !filterValue) return null;
+
+    const statusIdx = data.headers.findIndex(h => String(h).toUpperCase().trim() === 'STATUS');
+    const subErrorIdx = data.headers.findIndex(h => String(h).toUpperCase().trim() === 'SUBERRORCODE');
+    const errorIdx = data.headers.findIndex(h => String(h).toUpperCase().trim() === 'ERRORCODE');
 
     const rows = data.rows.filter(row => {
-      const val = String(row[statusColIndex] || '').toLowerCase().trim();
-      let cat = 'Other';
-      if (val === 'compwork' || val === 'complete' || val === 'done' || val === 'finished') cat = 'Completed';
-      else if (val === 'canclwork' || val === 'cancel' || val === 'failed' || val === 'workfail') cat = 'Failed';
-      else if (val === 'booked' || val === 'pending' || val === 'in_progress' || val === '') cat = 'In Progress';
-      return cat === selectedCategory;
+      if (filterGroup === 'STATUS') {
+         if (statusIdx < 0) return false;
+         return String(row[statusIdx]).toUpperCase().trim() === filterValue;
+      }
+      if (filterGroup === 'KENDALA_PELANGGAN' || filterGroup === 'KENDALA_TEKNIK') {
+         if (subErrorIdx < 0 || errorIdx < 0) return false;
+         const errCode = String(row[errorIdx]).toUpperCase().trim();
+         const subErr = String(row[subErrorIdx]).toUpperCase().trim();
+         
+         const targetErrCode = filterGroup === 'KENDALA_PELANGGAN' ? 'KENDALA PELANGGAN' : 'KENDALA TEKNIK';
+         return errCode === targetErrCode && subErr === filterValue;
+      }
+      return false;
     });
 
     return {
       headers: data.headers,
       rows,
-      fileName: `${data.fileName} - ${selectedCategory}`,
+      fileName: `${data.fileName} - ${filterValue}`,
       totalRows: rows.length
     } as ExcelData;
-  }, [data, selectedCategory]);
+  }, [data, filterGroup, filterValue]);
 
   const {
     searchQuery,
@@ -108,6 +124,16 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
     toggleColumnVisibility,
     exportToCSV,
   } = useTableData(filteredData);
+
+  const handleSelectFilter = (group: 'STATUS' | 'KENDALA_PELANGGAN' | 'KENDALA_TEKNIK', val: string) => {
+    if (val === '') {
+      setFilterGroup(null);
+      setFilterValue(null);
+    } else {
+      setFilterGroup(group);
+      setFilterValue(val.toUpperCase());
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -135,22 +161,48 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
         </div>
       </div>
 
-      {/* Filter Chips */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        <span className="text-[13px] font-semibold text-slate-500 mr-1">Filter Status:</span>
-        {['Semua', 'Completed', 'In Progress', 'Failed', 'Other'].map(status => (
-          <button
-            key={status}
-            onClick={() => setSelectedCategory(status === 'Semua' ? null : status)}
-            className={`px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all ${
-              (status === 'Semua' && !selectedCategory) || status === selectedCategory
-                ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md border-transparent'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
-            }`}
+      {/* Filter Dropdowns */}
+      <div className="flex flex-wrap items-center gap-3 bg-white p-3 rounded-xl border border-border premium-shadow shadow-sm">
+        <div className="flex items-center gap-2 text-slate-500 border-r border-slate-200 pr-3 mr-1">
+          <Filter className="w-4 h-4" />
+          <span className="text-sm font-semibold">Filter Data:</span>
+        </div>
+        
+        <select 
+          className={`text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${filterGroup === 'STATUS' ? 'bg-orange-50 border-orange-200 text-orange-700 font-medium' : 'bg-slate-50 border-slate-200'}`}
+          value={filterGroup === 'STATUS' ? filterValue || '' : ''}
+          onChange={(e) => handleSelectFilter('STATUS', e.target.value)}
+        >
+          <option value="">-- Status --</option>
+          {STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+
+        <select 
+          className={`text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${filterGroup === 'KENDALA_PELANGGAN' ? 'bg-orange-50 border-orange-200 text-orange-700 font-medium' : 'bg-slate-50 border-slate-200'}`}
+          value={filterGroup === 'KENDALA_PELANGGAN' ? filterValue || '' : ''}
+          onChange={(e) => handleSelectFilter('KENDALA_PELANGGAN', e.target.value)}
+        >
+          <option value="">-- Kendala Pelanggan --</option>
+          {KENDALA_PELANGGAN_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+
+        <select 
+          className={`text-sm border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors ${filterGroup === 'KENDALA_TEKNIK' ? 'bg-orange-50 border-orange-200 text-orange-700 font-medium' : 'bg-slate-50 border-slate-200'}`}
+          value={filterGroup === 'KENDALA_TEKNIK' ? filterValue || '' : ''}
+          onChange={(e) => handleSelectFilter('KENDALA_TEKNIK', e.target.value)}
+        >
+          <option value="">-- Kendala Teknik --</option>
+          {KENDALA_TEKNIK_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+        </select>
+
+        {filterGroup && (
+          <button 
+            onClick={() => { setFilterGroup(null); setFilterValue(null); }}
+            className="text-xs text-slate-500 hover:text-red-500 hover:bg-red-50 px-2 py-1.5 rounded-md transition-colors ml-auto"
           >
-            {status}
+            Clear Filters
           </button>
-        ))}
+        )}
       </div>
 
       {/* Metric Cards */}
@@ -175,25 +227,25 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="glass premium-shadow rounded-2xl p-5">
           <h2 className="text-base font-bold text-foreground mb-1">Distribusi Status</h2>
-          <p className="text-xs text-muted-foreground mb-4">Klik pada batang diagram untuk melihat data spesifik</p>
+          <p className="text-xs text-muted-foreground mb-4">Klik pada batang diagram untuk filter tabel</p>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={statusBarData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#6B7280' }} interval={0} angle={-45} textAnchor="end" height={60} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
               <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.12)' }} />
               <Bar 
                 dataKey="value" 
                 name="Jumlah" 
-                radius={[6, 6, 0, 0]}
-                onClick={(data) => setSelectedCategory(prev => prev === data.name ? null : data.name)}
+                radius={[4, 4, 0, 0]}
+                onClick={(data) => handleSelectFilter('STATUS', filterValue === data.name ? '' : data.name)}
               >
                 {statusBarData.map((entry, idx) => (
                   <Cell 
                     key={idx} 
                     fill={entry.fill} 
                     className="cursor-pointer transition-all duration-300 hover:brightness-110" 
-                    opacity={selectedCategory && selectedCategory !== entry.name ? 0.3 : 1}
+                    opacity={filterGroup === 'STATUS' && filterValue !== entry.name ? 0.3 : 1}
                   />
                 ))}
               </Bar>
@@ -218,18 +270,17 @@ export function ReportPage({ data, onExport, fileName }: ReportPageProps) {
       </div>
 
       {/* Drill-down Table */}
-      {selectedCategory && filteredData && (
+      {filterGroup && filterValue && filteredData && (
         <div className="flex flex-col h-[500px] glass premium-shadow rounded-2xl overflow-hidden mt-2 animate-in slide-in-from-top-4 duration-300">
           <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-white/50">
             <div>
               <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: statusBarData.find(d => d.name === selectedCategory)?.fill }}></span>
-                Detail Data: {selectedCategory}
+                Detail Data: {filterValue}
               </h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Menampilkan {filteredData.rows.length.toLocaleString()} baris data terkait</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Menampilkan {filteredData.rows.length.toLocaleString()} baris data terkait filter {filterGroup.replace('_', ' ')}</p>
             </div>
             <button
-              onClick={() => setSelectedCategory(null)}
+              onClick={() => { setFilterGroup(null); setFilterValue(null); }}
               className="text-xs font-medium px-4 py-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
             >
               Tutup Tabel

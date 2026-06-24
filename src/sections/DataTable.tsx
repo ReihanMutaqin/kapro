@@ -1,5 +1,5 @@
 import { Fragment, useRef, useEffect, useState, type UIEvent } from 'react';
-import { ArrowUpDown, ArrowUp, ArrowDown, Search, PanelRightClose, Download, X } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, PanelRightClose, Download, Copy, X } from 'lucide-react';
 import type { ExcelData, ColumnConfig } from '@/types';
 import { RowDetail } from './RowDetail';
 
@@ -39,6 +39,7 @@ export function DataTable({
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [tableHeight, setTableHeight] = useState(600);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     const updateHeight = () => {
@@ -53,6 +54,22 @@ export function DataTable({
 
   const handleScroll = (e: UIEvent<HTMLDivElement>) => {
     setScrollTop(e.currentTarget.scrollTop);
+  };
+
+  const handleCopy = () => {
+    const headers = visibleColumns.map(c => c.name).join('\t');
+    const rows = processedRows.map(({ row }) => 
+      visibleColumns.map(c => {
+        const val = row[c.index];
+        return val !== null ? String(val).replace(/\t/g, ' ').replace(/\n/g, ' ') : '';
+      }).join('\t')
+    ).join('\n');
+    
+    const tsvData = `${headers}\n${rows}`;
+    navigator.clipboard.writeText(tsvData).then(() => {
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    });
   };
 
   // Virtual scrolling calculations
@@ -120,6 +137,22 @@ export function DataTable({
               </button>
             )}
           </div>
+
+          <button
+            onClick={handleCopy}
+            className={`
+              flex items-center gap-1.5 h-8 px-3 text-[12px] font-medium
+              border rounded-md transition-colors duration-150
+              ${copySuccess 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
+                : 'bg-white border-[#E5E5E5] text-[#374151] hover:bg-[#F9FAFB] hover:border-[#D1D5DB]'
+              }
+            `}
+            title="Copy to Clipboard"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            {copySuccess ? 'Copied!' : 'Copy'}
+          </button>
 
           <button
             onClick={onExport}
